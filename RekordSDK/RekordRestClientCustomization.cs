@@ -7,6 +7,29 @@ namespace RekordRest
 {
   public partial class RekordRestClient
   {
+    /// <returns>Rekord successfully created</returns>
+    /// <exception cref="ApiException">A server side error occurred.</exception>
+    public async Task<Rekord> CreateFileRekordAsync(RekordRequest rekordRequest, string contentType, byte[] fileBytes)
+    {
+      var key = Guid.NewGuid().ToString();
+      var res = await CreatePayloadURLAsync(new Body
+      {
+        Key = key,
+        ContentType = contentType,
+        Workspace = rekordRequest.Workspace.ToString()
+      });
+
+      var succeeded = await new S3Uploader().UploadToS3(res.Url, contentType, fileBytes);
+      if (!succeeded)
+      {
+        throw new Exception("Uploading file to S3 bucket failed");
+      }
+
+      rekordRequest.File = res.Key;
+
+      return await CreateRekordAsync(rekordRequest);
+    }
+
     static partial void UpdateJsonSerializerSettings(JsonSerializerSettings settings)
     {
       settings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;

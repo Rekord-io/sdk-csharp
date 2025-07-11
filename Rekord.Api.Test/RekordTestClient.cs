@@ -11,7 +11,8 @@ namespace Rekord.Api.Test
     {
       var httpClient = new HttpClient();
       // token_id
-      var token = "eyJraWQiOiJGKzBKZHgzUldBVDRqSkRoSjVTRWRUYnJPOThrS0RhUWQ1UHg0N0pBekhBPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIyMjg1YzQ1NC02MDQxLTcwNGUtMGUzMS1hOGIxNzM4MjQ2NTEiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaXNzIjoiaHR0cHM6XC9cL2NvZ25pdG8taWRwLmV1LXdlc3QtMS5hbWF6b25hd3MuY29tXC9ldS13ZXN0LTFfYUtzWnJISEN4IiwiY29nbml0bzp1c2VybmFtZSI6IjIyODVjNDU0LTYwNDEtNzA0ZS0wZTMxLWE4YjE3MzgyNDY1MSIsIm9yaWdpbl9qdGkiOiJmNTlmNzQ1OS0zY2M5LTQxNzktOWFjNS1lOGJlMGJiMDM0MWQiLCJhdWQiOiIzaWV1MjJ0cTE5YTc4aG1vaWo5b2xuMDFrOCIsImV2ZW50X2lkIjoiNzEyMDFmOGMtZGNmOS00ZjNhLWEwYTQtNmQ5OTVmYTA0MDEwIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3NTE1NDg4MDYsImV4cCI6MTc1MTU1MjQwNiwiaWF0IjoxNzUxNTQ4ODA2LCJqdGkiOiIwNGZlMWQyOC0zMjBlLTQ2ZTMtOWQ1YS0yMzg0MGU0MGMzMGEiLCJlbWFpbCI6InNlY25pdG9tQHJla29yZC5pbyJ9.j7l_j4Qghr-FjTWU5JSMt0MdseKI8R8kOJ-uDWs6mFW1zrsihYcK-r9-SqOGjgxcaUEYePjCRjnyZzxOrHYO4E6iv9UknptmQzNsjRY2h8jW1YC_UlNoC2BK2lGFEXyXuy-xocHGygNLnv_mkQ7tndOPeVlCHMLOEnfhwQQ1INy1RpefgRjOEFBBbm-hLQINCn6yjywDvAsC8ZtKnt3veZrNA6ag2mbq_lu4AvjZIHZJ3wpFhN8gzKnNYsSwYvjn1NIEoOO-eOTpXog9VzP0bFGp6daPuHJZBtjUuz3f3IkD76IZ6bUtbzU6mS3nx0UUBji3FNnS6FD5whWbL7aNHw";
+      var token = "";
+
       httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
       rekordClient = new RekordRestClient("https://btdryd5731.execute-api.eu-west-1.amazonaws.com/rekord-web-application-sto-api-gw-stage", httpClient);
     }
@@ -103,6 +104,34 @@ namespace Rekord.Api.Test
       Assert.AreEqual(rekordRequest.Workspace.ToString(), createdRecord.Workspace);
 
       await rekordClient.GetPayloadURLAsync(createdRecord.Id);
+    }
+
+    [TestMethod]
+    public async Task TestCreateRecordFileInOneStep()
+    {
+      var workspaces = await rekordClient.ListWorkspacesAsync(null, null);
+      var workspace = workspaces.Items.FirstOrDefault();
+      if (workspace == null)
+      {
+        Assert.Fail();
+      }
+      var rekordRequest = new RekordRequest
+      {
+        Description = "Test",
+        IssuedAt = DateTime.UtcNow,
+        Group = "test",
+        OriginalFileName = "dummy.pdf",
+        Workspace = new Guid(workspace.Id),
+        PayloadType = RekordRequestPayloadType.FILE
+      };
+
+      var contentType = "application/pdf";
+      var fileBytes = File.ReadAllBytes(@"C:\Transactions\dummy.pdf");
+
+      var rekordCreated = await rekordClient.CreateFileRekordAsync(rekordRequest, contentType, fileBytes);
+      Assert.IsNotNull(rekordCreated);
+      var test = await rekordClient.GetRekordAsync(rekordCreated.Id);
+      Console.WriteLine($"Test {test.Id}");
     }
 
     [TestMethod]
